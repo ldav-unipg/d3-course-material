@@ -1,5 +1,8 @@
 # L1 - SVG figures
 
+This is the written guide for the first half of L1. Please, refer to the slides for any in-depth theoretical explanation.
+---
+
 - Open the `index.html` file from the `L1>1-SVG>start` folder.
 - The file should look like this
 
