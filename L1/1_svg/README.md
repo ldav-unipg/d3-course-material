@@ -1,6 +1,6 @@
-# L1 - SVG figures
+# L1 - SVG tutorial
 
-This is the written guide for the first half of L1. Please, refer to the slides for any in-depth theoretical explanation.
+This is the written guide for the first half of L1. Please, refer to the slides for an in-depth theoretical explanation.
 ---
 
 - Open the `index.html` file from the `L1>1-SVG>start` folder.
