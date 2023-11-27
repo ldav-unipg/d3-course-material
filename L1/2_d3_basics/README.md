@@ -19,8 +19,8 @@ d3.select("h1").style("color", "blue");
 
 ## 1. Selecting Elements
 
-- As we learn in the first half of the lesson, we need a responsive SVG container.
-- To do so, let's note that in the html we have a `<div/>` with `class = responsive-svg-container`, let's select it and append an `<svg/>` element inside.
+- As we learnt in the first half of the lesson, we need a responsive SVG container.
+- To do so, note that in the html we have a `<div/>` with `class = responsive-svg-container`. Let's select it and append an `<svg/>` element inside.
 
 ```js
 d3.select(".responsive-svg-container").append("svg");
@@ -35,7 +35,7 @@ const svg = d3
   .attr("viewBox", "0 0 1200 1600");
 ```
 
-- We are building a barchart. Usually, the horizontal lines of the barchart are built with `rect` elements. So we now add a `rect` to our `<svg>`.
+- We are start to building a **barchart**. Usually, the horizontal lines of the barchart are built with `rect` elements. So we now add a `rect` to our `<svg>`.
 
 ```js
 const svg = d3
@@ -46,7 +46,7 @@ const svg = d3
 svg.append("rect");
 ```
 
-- However, even though the element is visible in the DOM, is not visible in our browser. We need to set some of its attributes. Copy the following snippets.
+- However, even though the element is visible in the DOM, it is not visible in our browser. We need to set some of its attributes. Copy the following snippet.
 
 ```js
 svg

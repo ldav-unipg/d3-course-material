@@ -1,10 +1,9 @@
 # L1 - SVG tutorial
 
-This is the written guide for the first half of L1. Please, refer to the slides for an in-depth theoretical explanation.
----
+## This is the written guide for the first half of L1. Please, refer to the slides for an in-depth theoretical explanation.
 
 - Open the `index.html` file from the `L1>1-SVG>start` folder.
-- The file should look like this
+- The file should look like this:
 
 ```html
 <!DOCTYPE html>
@@ -20,7 +19,7 @@ This is the written guide for the first half of L1. Please, refer to the slides 
 </html>
 ```
 
-- Open the file in your browser with the Live Server Extension: to do so, right click the file in VSCode and select the option **> open with Live Server**
+- Open the file in your browser with the **Live Server Extension**: to do so, right click the file in VSCode and select the option **> open with Live Server**
 
 ## L1.1 Responsive SVG Container
 
@@ -38,7 +37,7 @@ This is the written guide for the first half of L1. Please, refer to the slides 
 <svg width="900" height="300" style="border:1px solid black;"></svg>
 ```
 
-- If you want to resize the svg container when you resize your window you can use the percentage of width. However, you will lose the ratio between the two dimensions.
+- If you want to resize the svg container when you resize your window, you can use the percentage of width. However, you will lose the ratio between the two dimensions.
 
 ```html
 <svg width="100%" height="300" style="border:1px solid black;"></svg>
@@ -61,7 +60,7 @@ This is the written guide for the first half of L1. Please, refer to the slides 
 ## L1.2 Lines
 
 - The `<line/>` component is used to draw edges in graphs (you will see it in action when we will use D3).
-- To draw a `line` in a svg element you need to insert the following code:
+- To draw a `line` in an svg element you need to insert the following code:
 
 ```html
 <svg>
@@ -69,15 +68,15 @@ This is the written guide for the first half of L1. Please, refer to the slides 
 </svg>
 ```
 
-- The values `x1, y1` are for the coordinates of the starting position, `x2, y2` are for the final position. The attributes `stroke` and `stroke-width` are required to actually see the line and assing a thinkess to it.
+- The values `x1, y1` are for the coordinates of the starting position, `x2, y2` are for the final position. The attributes `stroke` and `stroke-width` are required to actually see the line and adding a thickness to it.
 
 ## L1.3 Rectangles
 
 - To draw some rectangles, we need to specify some attributes:
-  - `x` and `y` for the position of the top-left corner
-  - `width` and `height` for the dimensions
-  - `fill`, `fill-opacity` for the inner color
-  - `stroke`, `stroke-width`, `stroke-opacity` for the border
+  - `x` and `y` for the position of the top-left corner,
+  - `width` and `height` for the dimensions,
+  - `fill`, `fill-opacity` for the inner color,
+  - `stroke`, `stroke-width`, `stroke-opacity` for the border.
 - We now draw three different rectangles with different coloring and dimensions. Inside your svg, write the following:
 
 ```html
@@ -97,17 +96,17 @@ This is the written guide for the first half of L1. Please, refer to the slides 
 
 - The `<circle/>` element is very important for D3 and graph drawing: it is the svg component used to draw nodes.
 - The `circle` require three parameters:
-  - `cx` and `cy` for the position of the center
-  - `r` for the radius
+  - `cx` and `cy` for the position of the center,
+  - `r` for the radius.
 - To draw a circle, write the following code:
 
 ```html
 <circle cx="530" cy="80" r="50" />
 ```
 
-- The `ellipse` require one more parameter than the `circle`:
-  - `cx` and `cy` are still used for the position of the center
-  - but now we have `rx` for the horizontal radius and `ry` for the vertical radius
+- The `ellipse` requires one more parameter than the `circle`:
+  - `cx` and `cy` are still used for the position of the center,
+  - `rx` for the horizontal radius and `ry` for the vertical radius.
 - To draw an ellipse, write the following code:
 
 ```html
@@ -116,7 +115,7 @@ This is the written guide for the first half of L1. Please, refer to the slides 
 
 ## L1.5 Paths
 
-- To draw a path we need to specify a lot of values inside the `d` attribute (for an explanation, refer to the slide).
+- To draw a path we need to specify a lot of values inside the `d` attribute (for an explanation, refer to the slides).
 - Write the following code inside the svg to draw a path.
 
 ```html
@@ -136,12 +135,12 @@ This is the written guide for the first half of L1. Please, refer to the slides 
 <text x="0" y="85">rect</text>
 ```
 
-- However, adding text to svg elements can be better achieved by grouping together elements.
+- However, adding text to svg elements can be better achieved by grouping elements together.
 
 ## L1.7 Grouping
 
 - For example, let's group the `rect` with its text.
-- Change your code by wrapping the last `rect` and `text` inside a `<g/>` element
+- Change your code by wrapping the last `rect` and `text` inside a `<g/>` element.
 
 ```diff
 - <rect
@@ -163,7 +162,7 @@ This is the written guide for the first half of L1. Please, refer to the slides 
 +            stroke="#6ba5d7"
 +          />
 +          <text x="0" y="85">rect</text>
-+        </g>
++ </g>
 ```
 
 - If you want to copy:
