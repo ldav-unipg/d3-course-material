@@ -44,7 +44,7 @@ d3.csv("./data/data.csv", (d) => {
 
 ## 1.2 Measuring the Dataset
 
-- Now, we can retrieve some informations from the Dataset. For example, if we want to know how many elements it contains, we can simply print the `data.length` to the console:
+- Now, we can retrieve some information from the Dataset. For example, if we want to know how many elements it contains, we can simply print the `data.length` to the console:
 
 ```js
 d3.csv("./data/data.csv", (d) => {

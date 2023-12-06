@@ -1,0 +1,3 @@
+const createTooltip = () => {};
+
+const handleMouseEvents = () => {};
