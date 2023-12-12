@@ -1,0 +1,387 @@
+/*CSS FILE FOR HTML DOCUMENT*/
+
+html,body {
+  font: 10px sans-serif;
+  min-height: 99%;
+  height: 99%;
+}
+
+svg {
+  position: relative;
+  /* min-height: 100%;
+  height: 100%; */
+  /* top:70px; */
+}
+
+svg text{
+   -webkit-user-select: none;
+   -moz-user-select: none;
+   -ms-user-select: none;
+   user-select: none;
+   pointer-events: none;
+}
+
+
+.custom-select {
+  position: relative;
+  height: 24px;
+  width: calc(100% - 28px);
+  margin-top: 4px;
+  margin-bottom: 4px;
+  padding: 0px 12px;
+  border-radius: 3px;
+  border-color: lightsteelblue;
+  border-width: 2px;
+  border-style: solid;
+}
+
+.custom-select:hover{
+  border-color: royalblue;
+}
+
+.custom-select select {
+  display: none; /*hide original SELECT element: */
+}
+
+.select-selected {
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Style the arrow inside the select element: */
+.select-selected:after {
+  position: absolute;
+  content: "";
+  top: 10px;
+  right: 10px;
+  width: 0;
+  height: 0;
+  border: 5px solid;
+  border-color: gray transparent transparent transparent;
+}
+
+/* Point the arrow upwards when the select box is open (active): */
+.select-selected.select-arrow-active:after {
+  border-color: transparent transparent gray transparent;
+  top: 5px;
+}
+
+.select-selected {
+  color: gray;
+  padding: 5px 16px;
+  /* border: 1px solid royalblue; */
+  cursor: pointer;
+}
+
+/* style the items (options) */
+.select-items div {
+  color: black;
+  padding: 5px 10px;
+  border-top: 2px solid royalblue;
+  border-left: 2px solid royalblue;
+  border-right: 2px solid royalblue;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.select-items :last-child{
+  border-bottom: 2px solid royalblue;
+}
+
+/* Style items (options): */
+.select-items {
+  position: absolute;
+  background-color: white;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 99;
+}
+
+/* Hide the items when the select box is closed: */
+.select-hide {
+  display: none;
+}
+
+.select-items div:hover {
+  background-color: royalblue;
+  color: white;
+  font-weight: bold;
+}
+ß
+/* width */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: #f2f2f2;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: royalblue;
+  border-radius: 15px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: lightsteelblue;
+}
+
+.container{
+  width: 1320px;
+  height: 540px;
+}
+
+rect.border {
+  position: relative;
+  stroke: lightsteelblue;
+  stroke-width: 2px;
+  fill: none;
+  pointer-events: none;
+}
+
+circle.node.cluster {
+  pointer-events: initial;
+}
+circle.center{
+  pointer-events: initial;
+}
+circle.copy{
+  stroke: #555;
+  stroke-width: 1px;
+}
+circle.rectNodes{
+  z-index: 1;
+}
+
+
+div.tooltip {
+    position: absolute;
+    z-index:1;
+    text-align: left;
+    width: auto;
+    height: auto;
+    padding: 2px;
+    font: 12px sans-serif;
+    white-space:pre-wrap;
+    background: lightsteelblue;
+    border: 0px;
+    border-radius: 8px;
+    pointer-events: none;
+    font-family: sans-serif;
+}
+
+.text-center{
+    text-align: center;
+}
+
+/*DA QUI INIZIA LA PARTE RIGUARDANTE IL DROPDOWN BUTTON*/
+
+/* Dropdown Button */
+.dropbtnLabelling {
+  position: relative;
+  border-radius: 50%;
+  /* background: url('circle-icons/circle-icons/full-color/png/128px/typography.png'); */
+  background: url('icons/string-text.svg');
+  background-repeat: no-repeat;
+  background-size: 80%;
+  background-color: lightsteelblue;
+  background-position: center;
+  border-width: 3px;
+  border-color: royalblue;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  padding: 20px;
+  display: inline-block;
+  margin: auto;
+  font-family: sans-serif;
+}
+
+/* Dropdown button on hover & focus */
+.dropbtnLabelling:hover, .dropbtn:focus {
+  background-color: lightsteelblue;
+  /* transform: rotate(360deg); */
+  cursor: pointer;
+  box-shadow: none;
+  transition : .2s;
+  -webkit-transition: .2s;
+  font-family: sans-serif;
+}
+
+/* The container <div> - needed to position the dropdown content */
+.dropdownLabelling {
+  position: absolute;
+  /* top: 560px; */
+  left: 75px;
+  display: inline-block;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+
+
+/* Dropdown Content (Hidden by Default) */
+.dropdownLabelling-content {
+  display: none;
+  position: absolute;
+  background-color: lightsteelblue; /* #f1f1f1; gray*/
+  min-width: 135px;
+  /* box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); */
+  z-index: 1;
+  border-bottom: 2px solid royalblue;
+  margin-top: 2px;
+  cursor: pointer;
+  bottom:103%;
+  left : 0%;
+}
+
+/* Links inside the dropdown */
+.dropdownLabelling-content a {
+  color: black;
+  padding: 8px 8px;
+  text-decoration:none;
+  border-top: 2px solid royalblue;
+  border-left: 2px solid royalblue;
+  border-right: 2px solid royalblue;
+  display:block;
+  font-size : 14px;
+  font-family: sans-serif; /* Ale */
+}
+
+/* Change color of dropdown links on hover */
+.dropdownLabelling-content a:hover {
+  background-color: royalblue;
+  color:white;
+  font-weight:bold;
+}
+
+/* Dropdown Button */
+.dropbtnChooseNetwork {
+  position: relative;
+  border-radius: 50%;
+  /* background: url('circle-icons/circle-icons/full-color/png/128px/folder.png'); */
+  background: url('icons/open-folder.svg');
+  background-repeat: no-repeat;
+  background-size: 65%;
+  background-color: lightsteelblue;
+  background-position: center;
+  border-width: 3px;
+  border-color: royalblue;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  padding: 20px;
+  display: inline-block;
+  margin: auto;
+  font-family: sans-serif;
+}
+
+/* Dropdown button on hover & focus */
+.dropbtnChooseNetwork:hover, .dropbtnChooseNetwork:focus {
+  background-color: lightsteelblue;
+  /* transform: rotate(360deg); */
+  cursor: pointer;
+  box-shadow: none;
+  transition: .2s;
+  -webkit-transition: .2s;
+  font-family: sans-serif;
+}
+
+.dropdownChooseNetwork {
+  position: absolute;
+  /* top: 560px; */
+  left: 20px;
+  display: inline-block;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.dropdownChooseNetwork-content {
+  display: none;
+  position: absolute;
+  background-color: lightsteelblue;
+  min-width: 140px;
+  border-bottom: 2px solid royalblue;
+  z-index: 1;
+  margin-top: 2px;
+  cursor: pointer;
+  bottom:103%;
+  left : 0%;
+}
+
+/* Links inside the dropdown */
+.dropdownChooseNetwork-content a {
+  color: black;
+  padding: 8px 8px;
+  text-decoration:none;
+  border-top: 2px solid royalblue;
+  border-left: 2px solid royalblue;
+  border-right: 2px solid royalblue;
+  display:block;
+  font-size : 14px;
+  font-family: sans-serif;
+}
+
+/* Change color of dropdown links on hover */
+.dropdownChooseNetwork-content a:hover {
+  background-color: royalblue;
+  color:white;
+  font-weight:bold;
+}
+
+
+/* Show the dropdown menu (use JS to add this class to the .dropdown-content container when the user clicks on the dropdown button) */
+.show {display:block;}
+
+
+.btnZoomIn {
+  position: absolute;
+  top: 190px;
+  left: 20px;
+  border-radius: 50%;
+  background: url('icons/plus.svg');
+  background-repeat: no-repeat;
+  background-size: 50%;
+  background-color: lightsteelblue;
+  background-position: center;
+  border-width: 3px;
+  border-color: royalblue;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  padding: 12px;
+  display: inline-block;
+  margin: auto;
+  font-family: sans-serif;
+}
+
+.btnZoomOut {
+  position: absolute;
+  top: 230px;
+  left: 20px;
+  border-radius: 50%;
+  background: url('icons/minus.svg');
+  background-repeat: no-repeat;
+  background-size: 50%;
+  background-color: lightsteelblue;
+  background-position: center;
+  border-width: 3px;
+  border-color: royalblue;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  padding: 12px;
+  display: inline-block;
+  margin: auto;
+  font-family: sans-serif;
+}
+

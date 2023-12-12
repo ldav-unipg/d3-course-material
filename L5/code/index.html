@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html style="scrollbar-color: royalblue #f2f2f2; scrollbar-width: thin">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Network Visualization</title>
+    <link rel="icon" sizes="16x16" href="icons/cluster.svg" />
+
+    <link rel="stylesheet" type="text/css" href="docStyle.css" />
+  </head>
+  <body>
+    <script src="https://unpkg.com/d3@5.9.7/dist/d3.js"></script>
+    <script type="text/javascript" src="listeners.js"></script>
+    <script type="text/javascript" src="labelling.js"></script>
+    <script type="text/javascript" src="palettes.js"></script>
+    <script type="text/javascript" src="inputNetworks.js"></script>
+    <script type="text/javascript">
+      /*
+           | VARIABLES
+      */
+
+      var widthFactor = 0.98,
+        heightFactor = 0.89,
+        width = widthFactor * window.innerWidth, // 960 svg width
+        height = heightFactor * window.innerHeight, // 540 svg height --->ratio 16/9
+        dr = 4, // default point radius
+        expand = {}, // expanded clusters
+        data,
+        net,
+        simulation,
+        linkg,
+        link,
+        nodeg,
+        node,
+        text,
+        startX,
+        startY,
+        endX,
+        endY,
+        stringJSON,
+        nodesAdjacency = [],
+        degSortedList = [], //descent ordered list of nodes degrees
+        weightSortedEdges = [],
+        k = 1, //zooming factor
+        deltaX = 0, // X zooming translation
+        deltaY = 0, // Y zooming translation
+        labelSize = 12,
+        labellingStrategy = "labelling with zooming";
+
+      const maxEdgeWeight = 5;
+      const off = 15;
+      const padAngle = 0.007;
+
+      /*
+        -| TOOLTIP
+      */
+      tooltip = d3
+        .select("body")
+        .append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+      let affiliationCounts = {};
+      let affiliationArray;
+      const colorMapping = new Map();
+
+      /*
+        -| ZOOM
+      */
+      var zoom = d3.zoom().filter(() => {
+        switch (d3.event.type) {
+          case "mousedown":
+            return d3.event.button === 2;
+          default:
+            return false;
+        }
+      });
+
+      var noLabels = new NoLabels(),
+        labellingWithZooming = new LabellingWithZooming(),
+        allLabelsShown = new AllLabelsShown(),
+        labelling = new Labelling();
+
+      labelling.setStrategy(labellingWithZooming);
+
+      function nodeid(n) {
+        return n.id;
+      }
+
+      function linkid(l) {
+        var u = nodeid(l.source),
+          v = nodeid(l.target);
+        return u < v ? u + "|" + v : v + "|" + u;
+      }
+
+      function getCluster(n) {
+        return n.cluster;
+      }
+
+      function getLabel(n) {
+        return n.label ? n.label : n.id;
+      }
+
+      function network(data, prev, index, expand) {
+        expand = expand || {};
+
+        var gm = {}, // group map:
+          nm = {}, // node map:
+          lm = {}, // link map:
+          gn = {}, // previous group nodes:
+          gc = {}, // previous group centroids:
+          nodes = [], // output nodes
+          edges = []; // output edges
+
+        if (prev) {
+          prev.nodes.forEach(function (n) {
+            var i = index(n),
+              o;
+            if (n.size > 0) {
+              gn[i] = n;
+              n.size = 0;
+            } else {
+              o = gc[i] || (gc[i] = { x: 0, y: 0, count: 0 });
+              o.x += n.x;
+              o.y += n.y;
+              o.count += 1;
+            }
+          });
+        }
+
+        for (var k = 0; k < data.nodes.length; ++k) {
+          var n = data.nodes[k],
+            i = index(n),
+            l =
+              gm[i] ||
+              (gm[i] = gn[i]) ||
+              (gm[i] = { cluster: i, size: 0, nodes: [] });
+
+          if (typeof expand[i] === "undefined") expand[i] = true;
+          if (expand[i]) {
+            nm[n.id] = nodes.length;
+
+            nodes.push(n);
+            if (gn[i]) {
+              n.x = gn[i].x + Math.random();
+              n.y = gn[i].y + Math.random();
+            }
+          } else {
+            if (l.size == 0) {
+              nm[i] = nodes.length;
+              nodes.push(l);
+              if (gc[i]) {
+                l.x = gc[i].x / gc[i].count;
+                l.y = gc[i].y / gc[i].count;
+              }
+            }
+            l.nodes.push(n);
+          }
+          l.size += 1;
+          n.group_data = l;
+        }
+
+        for (i in gm) {
+          gm[i].link_count = 0;
+        }
+
+        for (k = 0; k < data.edges.length; ++k) {
+          var e = data.edges[k],
+            u = index(e.source),
+            v = index(e.target);
+
+          if (u != v) {
+            gm[u].link_count++;
+            gm[u].externEdges = gm[u].externEdges || [];
+            gm[u].externEdges.push(e);
+            gm[v].link_count++;
+            gm[v].externEdges = gm[v].externEdges || [];
+            gm[v].externEdges.push(e);
+          } else if (typeof u != "undefined" && typeof v != "undefined") {
+            nodes.find(function (n) {
+              return n.cluster == u;
+            }).internEdges =
+              nodes.find(function (n) {
+                return n.cluster == u;
+              }).internEdges || [];
+            nodes
+              .find(function (n) {
+                return n.cluster == u;
+              })
+              .internEdges.push(e);
+          }
+          u = expand[u] ? nm[e.source.id] : nm[u];
+          v = expand[v] ? nm[e.target.id] : nm[v];
+
+          var i = u < v ? u + "|" + v : v + "|" + u,
+            l =
+              lm[i] ||
+              (lm[i] = { source: u, target: v, size: e.value, label: e.label });
+        }
+        for (i in lm) {
+          edges.push(lm[i]);
+        }
+
+        for (var i = 0; i < edges.length; ++i) {
+          o = edges[i];
+          o.label = edges[i].label;
+          if (!o.label.includes(edges[i].label)) {
+            o.label = o.label + "; " + edges[i].label;
+          }
+
+          o.index = i;
+          o.source = nodes[o.source];
+          o.target = nodes[o.target];
+        }
+
+        return { nodes: nodes, edges: edges };
+      }
+
+      function refreshVars() {
+        data = {};
+        net = null;
+        startX = undefined;
+        startY = undefined;
+        linkg ? linkg.remove() : {};
+        link = {};
+        nodeg ? nodeg.remove() : {};
+        nodeg = {};
+        node = {};
+        text ? text.remove() : {};
+        text = {};
+        nodesAdjacency = [];
+        degSortedList = [];
+        weightSortedEdges = [];
+        expand = {}; // expanded clusters
+
+        defaultParam = 1.9;
+        defaultParam2 = 3.3;
+
+        param = defaultParam;
+        param2 = defaultParam2;
+        labellingStrategy = "labelling with zooming";
+        labelling.setStrategy(labellingWithZooming);
+
+        vis.remove();
+        vis = {};
+        vis = container
+          .append("svg")
+          .attr("width", width)
+          .attr("height", height)
+          .on("mousedown", mousedown);
+
+        vis.call(zoom.on("zoom", zoom_actions));
+        vis.on("dblclick.zoom", function () {
+          while (currentZoomValue < 0) {
+            zoomIn();
+          }
+          while (currentZoomValue > 0) {
+            zoomOut();
+          }
+          changeZoom(currentZoomValue);
+          vis.call(zoom.transform, d3.zoomIdentity.scale(1));
+        });
+        currentZoomValue = 0;
+        changeZoom(currentZoomValue);
+
+        document.getElementsByClassName("container")[0].oncontextmenu =
+          function () {
+            if (
+              document.getElementsByClassName("container")[0].style.cursor ==
+              "move"
+            )
+              document.getElementsByClassName("container")[0].style.cursor =
+                "default";
+            return false;
+          };
+
+        border = vis
+          .append("rect")
+          .attr("class", "border")
+          .attr("fill", "white")
+          .attr("width", width)
+          .attr("height", height);
+      }
+
+      function range(start, stop, step) {
+        (start = +start),
+          (stop = +stop),
+          (step =
+            (n = arguments.length) < 2
+              ? ((stop = start), (start = 0), 1)
+              : n < 3
+              ? 1
+              : +step);
+
+        var i = -1,
+          n = Math.max(0, Math.ceil((stop - start) / step)) | 0,
+          range = new Array(n);
+
+        while (++i < n) {
+          range[i] = start + i * step;
+        }
+
+        return range;
+      }
+
+      function init() {
+        net = network(data, net, getCluster, expand);
+
+        net.nodes.map(function (n) {
+          var listAdj = [];
+          net.edges.map(function (e) {
+            e.source.id == n.id ? listAdj.push(e.target.id) : {};
+            e.target.id == n.id ? listAdj.push(e.source.id) : {};
+          });
+          nodesAdjacency[n.id] = listAdj;
+        });
+
+        for (var i = 0; i < net.nodes.length; i++) {
+          var idNode = net.nodes[i].id;
+          if (
+            nodesAdjacency[idNode] == undefined ||
+            nodesAdjacency[idNode].length == 0
+          ) {
+            net.nodes.splice(i, 1);
+            i = i - 1;
+          }
+        }
+
+        /*
+        -| Force Directed
+        */
+        simulation = d3
+          .forceSimulation(net.nodes)
+          .force(
+            "charge",
+            d3
+              .forceManyBody()
+              .strength(-130 * (150 / data.nodes.length))
+              .distanceMin(1)
+              .distanceMax(2000)
+          )
+          .force(
+            "collide",
+            d3.forceCollide().strength(0.7).radius(5).iterations(1)
+          )
+          .force(
+            "link",
+            d3
+              .forceLink()
+              .id(function (d) {
+                return d.id;
+              })
+              .distance(40)
+              .iterations(1)
+              .links(net.edges)
+          )
+          .force(
+            "x",
+            d3
+              .forceX()
+              .strength(0.1)
+              .x(width / 2)
+          )
+          .force(
+            "y",
+            d3
+              .forceY()
+              .strength(0.1)
+              .y(height / 2)
+          )
+          .force("center", d3.forceCenter(width / 2, height / 2));
+        simulation.velocityDecay(0.03);
+        simulation.restart();
+
+        // Color Mapping Affiliations
+        data.nodes.forEach(function (node) {
+          let affiliation = node.affiliation;
+
+          if (affiliationCounts[affiliation]) {
+            affiliationCounts[affiliation]++;
+          } else {
+            affiliationCounts[affiliation] = 1;
+          }
+        });
+        affiliationArray = Object.entries(affiliationCounts);
+        affiliationArray.sort(function (a, b) {
+          return d3.descending(a[1], b[1]);
+        });
+        for (var i = 0; i < 9; i++) {
+          colorMapping.set(affiliationArray[i][0], paletteAffil[i]);
+        }
+        for (var i = 9; i < affiliationArray.length; i++) {
+          colorMapping.set(affiliationArray[i][0], paletteAffil[9]);
+        }
+
+        /*
+          -| D3: drawing edges
+        */
+        linkg.selectAll("line.link").remove();
+        link = linkg
+          .selectAll("line.link")
+          .data(net.edges, linkid)
+          .enter()
+          .append("line")
+          .attr("class", "link")
+          .attr("stroke-width", function (d) {
+            return 2 * linkUpperBound(d.size) || 1;
+          })
+          .attr("stroke", "grey")
+          .attr("stroke-color", "grey")
+          .attr("stroke-opacity", 0.6)
+          .on("mouseenter", mouseEnterEdge)
+          .on("mouseleave", mouseLeaveEdge);
+
+        nodeg.selectAll("circle.node").remove();
+
+        /*
+          -| D3: drawing Nodes
+        */
+        node = nodeg
+          .selectAll("circle.node")
+          .data(net.nodes, nodeid)
+          .enter()
+          .append("circle")
+          .attr("class", function (d) {
+            return "node leaf";
+          })
+          .attr("r", function (d) {
+            return d.size
+              ? (d.size + dr) * 0.8 * d.weight
+              : (dr + 1) * 0.8 * d.weight;
+          })
+          .attr("cx", function (d) {
+            return d.x;
+          })
+          .attr("cy", function (d) {
+            return d.y;
+          })
+          .attr("stroke-width", 3)
+          .attr("stroke-color", "grey")
+          .attr("stroke", "grey")
+          .attr("stroke-opacity", 0.8)
+          .attr("fill", function (d) {
+            return colorMapping.get(d.affiliation);
+          })
+          .on("mouseenter", mouseEnterNode)
+          .on("mouseleave", mouseLeaveNode);
+
+        /*
+          -| D3 Drag
+        */
+        node.call(
+          d3
+            .drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended)
+        );
+
+        degSortedList = calculateDegree(net);
+
+        weightSortedEdges = d3
+          .scaleThreshold()
+          .domain(calculateWeightIntervals(net.edges))
+          .range([1, 2, 3, 4]);
+
+        kMap = d3
+          .scaleQuantile()
+          .domain(range(net.nodes.length))
+          .range([
+            0, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8,
+          ]);
+
+        /*
+          -| Text
+        */
+        text = nodeg
+          .selectAll(".text")
+          .data(net.nodes)
+          .enter()
+          .append("text")
+          .each(function (d) {
+            d.kThreshold = kMap(degSortedList.indexOf(d.degree));
+            d.opacityScale = d3
+              .scaleLinear()
+              .domain([d.kThreshold, d.kThreshold + 1])
+              .range([0, 1]);
+          })
+          .attr("dy", ".35em")
+          .attr("dx", function (d) {
+            return "" + (0.2 * d.weight + 0.9) + "em";
+          })
+          .text(function (d) {
+            return getLabel(d);
+          })
+          .attr("opacity", function (d) {
+            if (d.kThreshold < 1) {
+              return 1;
+            }
+            return 0;
+          })
+          .style("font-family", "sans-serif")
+          .style("font-size", labelSize + "px");
+
+        vis.select("g.edges").attr("transform", d3.zoomIdentity);
+        vis.select("g.nodes").attr("transform", d3.zoomIdentity);
+        (k = 1), //zooming factor
+          (deltaX = 0), // X zooming translation
+          (deltaY = 0), // Y zooming translation
+          simulation.on("tick", ticked);
+
+        document.getElementById("labelsButton").style.display = "block";
+        document.getElementById("zoomOptions").style.display = "block";
+      }
+
+      /*
+        -| Ticked Function
+      */
+      function ticked() {
+        nodeg
+          .selectAll("circle.node")
+          .attr("cx", function (d) {
+            return d.x;
+          })
+          .attr("cy", function (d) {
+            return d.y;
+          });
+        link
+          .attr("x1", function (d) {
+            return d.source.x;
+          })
+          .attr("y1", function (d) {
+            return d.source.y;
+          })
+          .attr("x2", function (d) {
+            return d.target.x;
+          })
+          .attr("y2", function (d) {
+            return d.target.y;
+          });
+
+        text.attr("transform", function (d) {
+          return "translate(" + d.x + "," + d.y + ")";
+        });
+      }
+
+      // -----------------------------------------------------------------------------------------------
+
+      function calculateDegree(net) {
+        var nodes = net.nodes,
+          edges = net.edges,
+          degSortedList = [];
+        nodesDegree = new Map();
+
+        nodes.map(function (n) {
+          var countDeg = 0;
+          edges.map(function (e) {
+            e.source == n || e.target == n ? countDeg++ : {};
+          });
+          n.degree = countDeg;
+          degSortedList.push(countDeg);
+          nodesDegree.set(n, countDeg);
+        });
+
+        degSortedList.sort(function (a, b) {
+          return b - a;
+        });
+        nodesSortedByDegree = new Map(
+          [...nodesDegree.entries()].sort((a, b) => b[1] - a[1])
+        );
+        return degSortedList;
+      }
+
+      function calculateWeightIntervals(edges) {
+        var thresholds = [],
+          tr,
+          frac = [0.25, 0.33, 0.5],
+          sizes = [];
+
+        edges.map(function (e) {
+          sizes.push(e.size);
+        });
+        sizes.sort(function (a, b) {
+          return a - b;
+        });
+        for (var i = 0; i < 3; i++) {
+          if (sizes.length > 0) {
+            tr = sizes[Math.ceil(sizes.length * frac[i])] + 0.1;
+            sizes = sizes.filter((e) => e > tr);
+            sizes.length > 0 ? (thresholds[i] = tr) : {};
+          }
+        }
+        thresholds.length == 0 ? (thresholds = 1) : {};
+        return thresholds;
+      }
+
+      function linkUpperBound(size) {
+        return size < maxEdgeWeight ? size : maxEdgeWeight;
+      }
+
+      /*
+        -| D3 Selections
+      */
+      var body = d3.select("body"),
+        container = body
+          .append("div")
+          .attr("class", "container")
+          .attr("width", width)
+          .attr("height", height),
+        vis = container
+          .append("svg")
+          .attr("width", width)
+          .attr("height", height)
+          .on("mousedown", mousedown),
+        border = vis
+          .append("rect")
+          .attr("class", "border")
+          .attr("width", width)
+          .attr("height", height);
+
+      vis.call(zoom.on("zoom", zoom_actions));
+      vis.on("dblclick.zoom", function () {
+        while (currentZoomValue < 0) {
+          zoomIn();
+        }
+        while (currentZoomValue > 0) {
+          zoomOut();
+        }
+        document.getElementById("changeZoom").value = currentZoomValue;
+        vis.call(zoom.transform, d3.zoomIdentity.scale(1));
+      });
+
+      document.getElementsByClassName("container")[0].oncontextmenu =
+        function () {
+          return false;
+        };
+
+      function chooseLabelling() {
+        document.getElementById("myDropdownLabelling").classList.toggle("show");
+      }
+
+      function chooseNetwork() {
+        document
+          .getElementById("myDropdownChooseNetwork")
+          .classList.toggle("show");
+      }
+
+      function toggleNoLabels() {
+        if (net) {
+          labelling.setStrategy(noLabels);
+          labellingStrategy = "no labels";
+          vis
+            .select("g.nodes")
+            .selectAll("text")
+            .each(function (d) {
+              d.clicked = false;
+            });
+          nodeg
+            .selectAll("text")
+            .attr("opacity", 0.2)
+            .style("font-size", 0 + "px")
+            .style("font-family", "sans-serif"); // Ale
+        }
+      }
+
+      function toggleLabelling() {
+        if (net) {
+          labelling.setStrategy(labellingWithZooming);
+          labellingStrategy = "labelling with zooming";
+          vis
+            .select("g.nodes")
+            .selectAll("text")
+            .each(function (d) {
+              d.clicked = undefined;
+            });
+          restartLabelling(k);
+        }
+      }
+
+      function restartLabelling(k) {
+        vis
+          .select("g.nodes")
+          .selectAll("text")
+          .style("font-family", "sans-serif") // Ale
+          .style("font-size", function (d) {
+            if (k >= d.kThreshold && !d.clicked) {
+              return k > 1 ? labelSize / Math.sqrt(k) + "px" : labelSize + "px";
+            } else if (d.clicked) {
+              return k > 1 ? labelSize / Math.sqrt(k) + "px" : labelSize + "px";
+            }
+            return 0;
+          })
+          .attr("opacity", function (d) {
+            if (k >= d.kThreshold && !d.clicked) {
+              return d.opacityScale(k);
+            } else if (d.clicked) {
+              return 1;
+            }
+            return 0;
+          });
+      }
+
+      function toggleAllLabels() {
+        if (net) {
+          labelling.setStrategy(allLabelsShown);
+          labellingStrategy = "all labels";
+          vis
+            .select("g.nodes")
+            .selectAll("text")
+            .each(function (d) {
+              d.clicked = true;
+            });
+          nodeg
+            .selectAll("text")
+            .attr("opacity", 1)
+            .style("font-family", "sans-serif") // Ale
+            .style("font-size", function (d) {
+              if (d.clicked)
+                return k > 1
+                  ? labelSize / Math.sqrt(k) + "px"
+                  : labelSize + "px";
+              return 0;
+            });
+        }
+      }
+
+      // Close the dropdown menu if the user clicks outside of it
+      window.onclick = function (event) {
+        if (!event.target.matches(".dropbtnLabelling")) {
+          var dropdowns = document.getElementsByClassName(
+            "dropdownLabelling-content"
+          );
+          var i;
+          for (i = 0; i < dropdowns.length; i++) {
+            var openDropdown = dropdowns[i];
+            if (openDropdown.classList.contains("show")) {
+              openDropdown.classList.remove("show");
+            }
+          }
+        }
+        if (!event.target.matches(".dropbtnChooseNetwork")) {
+          var dropdowns = document.getElementsByClassName(
+            "dropdownChooseNetwork-content"
+          );
+          var i;
+          for (i = 0; i < dropdowns.length; i++) {
+            var openDropdown = dropdowns[i];
+            if (openDropdown.classList.contains("show")) {
+              openDropdown.classList.remove("show");
+            }
+          }
+        }
+      };
+
+      function loadNetwork(networkName) {
+        refreshVars();
+        stringJSON = JSON.stringify(networkName);
+        json = JSON.parse(stringJSON);
+        data.nodes = json.nodes;
+        data.edges = json.edges;
+
+        for (var i = 0; i < data.edges.length; ++i) {
+          o = data.edges[i];
+          o.source = data.nodes.find(function (n) {
+            return n.id == o.source;
+          });
+          o.target = data.nodes.find(function (n) {
+            return n.id == o.target;
+          });
+        }
+
+        linkg = vis.append("g").attr("class", "edges");
+        nodeg = vis.append("g").attr("class", "nodes");
+
+        init();
+      }
+
+      function setNetworkName(name) {
+        document.getElementById("networkName").value = name;
+        document.getElementById("networkName").size = name.length + 1;
+      }
+
+      function zoomIn() {
+        if (net)
+          try {
+            currentZoomValue++;
+            changeZoom(currentZoomValue);
+            vis.call(
+              zoom
+                .on("zoom", zoom_actions)
+                .scaleBy(vis.transition().duration(0), 1.15)
+            );
+          } catch (TypeError) {}
+      }
+
+      function zoomOut() {
+        if (net)
+          try {
+            currentZoomValue--;
+            changeZoom(currentZoomValue);
+            vis.call(
+              zoom
+                .on("zoom", zoom_actions)
+                .scaleBy(vis.transition().duration(0), 1 / 1.15)
+            );
+          } catch (TypeError) {}
+      }
+
+      var currentZoomValue = 0;
+      function changeZoom(d) {
+        if (net)
+          try {
+            if (d > currentZoomValue) {
+              currentZoomValue++;
+              vis.call(
+                zoom
+                  .on("zoom", zoom_actions)
+                  .scaleBy(vis.transition().duration(0), 1.15)
+              );
+            } else if (d < currentZoomValue) {
+              currentZoomValue--;
+              vis.call(
+                zoom
+                  .on("zoom", zoom_actions)
+                  .scaleBy(vis.transition().duration(0), 1 / 1.15)
+              );
+            }
+          } catch (TypeError) {}
+      }
+
+      function addText(txt, x, y) {
+        vis
+          .append("text")
+          .text(txt)
+          .style("font-family", "sans-serif")
+          .style("font-weight", "900")
+          .style("font-size", "x-large")
+          .style("fill", "darkorange")
+          .attr("x", x)
+          .attr("y", y);
+      }
+
+      d3.selection.prototype.moveToBack = function () {
+        return this.each(function () {
+          var children = this.parentNode.children;
+          var firstText = this.parentNode.firstChild;
+          for (var i = 0; i < children.length; i++) {
+            if (
+              children[i].tagName == "text" ||
+              children[i].className.baseVal == "rectLabel"
+            ) {
+              firstText = children[i];
+              break;
+            }
+          }
+          if (firstText) {
+            this.parentNode.insertBefore(this, firstText);
+          }
+        });
+      };
+
+      d3.selection.prototype.moveToFront = function () {
+        return this.each(function () {
+          this.parentNode.appendChild(this);
+        });
+      };
+
+      function initializeSelectSorting() {
+        /* customized select */
+        var x, i, j, l, ll, selElmnt, a, b, c;
+        /* Look for any elements with the class "custom-select": */
+        x = document.getElementsByClassName("custom-select");
+        l = x.length;
+        for (i = 0; i < l; i++) {
+          selElmnt = x[i].getElementsByTagName("select")[0];
+          ll = selElmnt.length;
+          /* For each element, create a new DIV that will act as the selected item: */
+          a = document.createElement("DIV");
+          a.setAttribute("class", "select-selected");
+          a.innerHTML = selElmnt.options[selElmnt.selectedIndex].innerHTML;
+          x[i].appendChild(a);
+          /* For each element, create a new DIV that will contain the option list: */
+          b = document.createElement("DIV");
+          b.setAttribute("class", "select-items select-hide");
+          for (j = 1; j < ll; j++) {
+            /* For each option in the original select element,
+            create a new DIV that will act as an option item: */
+            c = document.createElement("DIV");
+            c.innerHTML = selElmnt.options[j].innerHTML;
+            c.addEventListener("click", function (e) {
+              /* When an item is clicked, update the original select box,
+                and the selected item: */
+              var y, i, k, s, h, sl, yl;
+              s = this.parentNode.parentNode.getElementsByTagName("select")[0];
+              sl = s.length;
+              h = this.parentNode.previousSibling;
+              for (i = 0; i < sl; i++) {
+                if (s.options[i].innerHTML == this.innerHTML) {
+                  s.selectedIndex = i;
+                  h.innerHTML = this.innerHTML;
+                  y =
+                    this.parentNode.getElementsByClassName("same-as-selected");
+                  yl = y.length;
+                  for (k = 0; k < yl; k++) {
+                    y[k].removeAttribute("class");
+                  }
+                  this.setAttribute("class", "same-as-selected");
+                  this.setAttribute(
+                    "value",
+                    s.options[s.selectedIndex].innerHTML
+                  );
+                  changeNodesSorting();
+                  break;
+                }
+              }
+              h.click();
+            });
+            b.appendChild(c);
+          }
+          x[i].appendChild(b);
+          a.addEventListener("click", function (e) {
+            /* When the select box is clicked, close any other select boxes,
+            and open/close the current select box: */
+            e.stopPropagation();
+            closeAllSelect(this);
+            this.nextSibling.classList.toggle("select-hide");
+            this.classList.toggle("select-arrow-active");
+          });
+        }
+      }
+
+      function closeAllSelect(elmnt) {
+        /* A function that will close all select boxes in the document,
+        except the current select box: */
+        var x,
+          y,
+          k,
+          xl,
+          yl,
+          arrNo = [];
+        x = document.getElementsByClassName("select-items");
+        y = document.getElementsByClassName("select-selected");
+        xl = x.length;
+        yl = y.length;
+        for (k = 0; k < yl; k++) {
+          if (elmnt == y[k]) {
+            arrNo.push(k);
+          } else {
+            y[k].classList.remove("select-arrow-active");
+          }
+        }
+        for (k = 0; k < xl; k++) {
+          if (arrNo.indexOf(k)) {
+            x[k].classList.add("select-hide");
+          }
+        }
+      }
+      /* If the user clicks anywhere outside the select box,
+      then close all select boxes: */
+      document.addEventListener("click", closeAllSelect);
+      /* end customized select */
+    </script>
+
+    <div class="dropdownChooseNetwork" id="dropdownChooseNetwork">
+      <button
+        onclick="chooseNetwork()"
+        title="Choose a network"
+        style="outline: none"
+        class="dropbtnChooseNetwork"
+      ></button>
+      <div id="myDropdownChooseNetwork" class="dropdownChooseNetwork-content">
+        <a onclick="loadNetwork(gd20212022);">GD 2021-2022</a>
+      </div>
+    </div>
+    <script>
+      document.getElementById("dropdownChooseNetwork").style.top =
+        height + 15 + "px";
+    </script>
+
+    <div class="dropdownLabelling" id="dropdownLabels">
+      <button
+        id="labelsButton"
+        onclick="chooseLabelling()"
+        title="Labeling options"
+        style="display: none; outline: none"
+        class="dropbtnLabelling"
+      ></button>
+      <div id="myDropdownLabelling" class="dropdownLabelling-content">
+        <a onclick="toggleNoLabels()">No labels</a>
+        <a onclick="toggleLabelling()">Automatic labels</a>
+        <a onclick="toggleAllLabels()">All labels</a>
+      </div>
+    </div>
+    <script>
+      document.getElementById("dropdownLabels").style.top = height + 15 + "px";
+    </script>
+
+    <div id="zoomOptions" style="display: none">
+      <button
+        onclick="zoomIn()"
+        title="Zoom in"
+        style="outline: none"
+        class="btn btnZoomIn"
+      ></button>
+      <button
+        onclick="zoomOut()"
+        title="Zoom out"
+        style="outline: none"
+        class="btn btnZoomOut"
+      ></button>
+    </div>
+    <script>
+      document.getElementsByClassName("btnZoomOut")[0].style.top =
+        height - 40 + "px";
+      document.getElementsByClassName("btnZoomIn")[0].style.top =
+        height - 76 + "px";
+    </script>
+
+    <script>
+      window.onclick = function (event) {
+        if (!event.target.matches(".dropbtnLabelling")) {
+          var drop = document.getElementById("myDropdownLabelling");
+          if (drop.classList.contains("show")) {
+            drop.classList.remove("show");
+          }
+        }
+        if (!event.target.matches(".dropbtnChooseNetwork")) {
+          var drop = document.getElementById("myDropdownChooseNetwork");
+          if (drop.classList.contains("show")) {
+            drop.classList.remove("show");
+          }
+        }
+      };
+    </script>
+  </body>
+</html>
